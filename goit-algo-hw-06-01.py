@@ -1,9 +1,11 @@
-import network as nx
+import networkx as nx
 import matplotlib.pyplot as plt
 
-def build_london_metro_graph():
 
-        lines = {
+def build_london_metro_graph():
+    """Створює фрагмент мережі метро Лондона як граф NetworkX."""
+
+    lines = {
         "Central": [
             "Notting Hill Gate", "Queensway", "Lancaster Gate", "Marble Arch",
             "Bond Street", "Oxford Circus", "Tottenham Court Road", "Holborn"
@@ -39,27 +41,28 @@ def build_london_metro_graph():
 
     graph = nx.Graph()
 
+    # Додаємо ребра для кожної лінії
     for line_name, stations in lines.items():
         for i in range(len(stations) - 1):
-            u = stations[i]
-            v = stations[i + 1]
+            u, v = stations[i], stations[i + 1]
             if graph.has_edge(u, v):
                 graph[u][v].setdefault("lines", set()).add(line_name)
             else:
                 graph.add_edge(u, v, lines={line_name})
-    
+
+    # Позначаємо пересадкові вузли
     for station, lns in interchanges:
         if station in graph.nodes:
-             graph.nodes[station]["interchanges"] = True
-             graph.nodes[station]["lines"] = sorted(lns)
+            graph.nodes[station]["interchange"] = True
+            graph.nodes[station]["lines"] = sorted(lns)
 
-    
+    # Інші вузли
     for node in graph.nodes:
-        if "interchanges" not in graph.nodes[node]:
-            graph.nodes[node]["interchanges"] = False
+        if "interchange" not in graph.nodes[node]:
+            graph.nodes[node]["interchange"] = False
             node_lines = set()
             for neighbor in graph.neighbors(node):
-                edge_lines = graph.get_edge_data(node, neighbore).get("lines", set())
+                edge_lines = graph.get_edge_data(node, neighbor).get("lines", set())
                 node_lines |= edge_lines
             graph.nodes[node]["lines"] = sorted(node_lines)
 
@@ -67,6 +70,7 @@ def build_london_metro_graph():
 
 
 def visualize_graph(graph):
+    """Візуалізує граф метро Лондона."""
     pos = nx.spring_layout(graph, seed=42)
     plt.figure(figsize=(12, 8))
 
@@ -78,4 +82,56 @@ def visualize_graph(graph):
         "Circle": "#FFD300",
     }
 
-    
+    # Малюємо ребра з кольорами ліній
+    for u, v, data in graph.edges(data=True):
+        lines_set = data.get("lines", {"Unknown"})
+        line = next(iter(lines_set))
+        color = line_colors.get(line, "#999999")
+        nx.draw_networkx_edges(graph, pos, edgelist=[(u, v)], width=2.0, edge_color=color)
+
+    # Вузли: пересадки та звичайні
+    interchange_nodes = [n for n, d in graph.nodes(data=True) if d["interchange"]]
+    regular_nodes = [n for n, d in graph.nodes(data=True) if not d["interchange"]]
+
+    nx.draw_networkx_nodes(
+        graph, pos, nodelist=regular_nodes, node_size=500,
+        node_color="#87CEFA", alpha=0.9
+    )
+    nx.draw_networkx_nodes(
+        graph, pos, nodelist=interchange_nodes, node_size=800,
+        node_color="#FF8C00", alpha=0.95
+    )
+
+    nx.draw_networkx_labels(graph, pos, font_size=9)
+
+    plt.title("Фрагмент мережі метро Лондона")
+    plt.axis("off")
+    plt.tight_layout()
+    plt.show()
+
+
+def analyze_graph(graph):
+    """Виводить основні характеристики графа."""
+    num_nodes = graph.number_of_nodes()
+    num_edges = graph.number_of_edges()
+    degrees = dict(graph.degree())
+    avg_degree = sum(degrees.values()) / num_nodes
+    density = nx.density(graph)
+    components = list(nx.connected_components(graph))
+
+    print("=== ПІДСУМКИ ГРАФА ===")
+    print(f"Кількість станцій: {num_nodes}")
+    print(f"Кількість з’єднань: {num_edges}")
+    print(f"Середній ступінь вершини: {avg_degree:.2f}")
+    print(f"Щільність графа: {density:.4f}")
+    print(f"Кількість компонент зв’язності: {len(components)}")
+
+    print("\n=== Ступені вершин (приклад) ===")
+    for node, degree in list(degrees.items())[:10]:
+        print(f"{node}: {degree}")
+
+
+if __name__ == "__main__":
+    metro_graph = build_london_metro_graph()
+    visualize_graph(metro_graph)
+    analyze_graph(metro_graph)
