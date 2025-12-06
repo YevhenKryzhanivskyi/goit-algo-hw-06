@@ -1,14 +1,17 @@
-import networkx as nx
-import matplotlib.pyplot as plt
+import heapq
 from collections import deque
+
+import matplotlib.pyplot as plt
+import networkx as nx
 
 
 def build_london_metro_graph():
     """Створює фрагмент мережі метро Лондона як граф NetworkX."""
     lines = {
         "Central": [
-            "Notting Hill Gate", "Queensway", "Lancaster Gate", "Marble Arch",
-            "Bond Street", "Oxford Circus", "Tottenham Court Road", "Holborn"
+            "Notting Hill Gate", "Queensway", "Lancaster Gate",
+            "Marble Arch", "Bond Street", "Oxford Circus",
+            "Tottenham Court Road", "Holborn"
         ],
         "Jubilee": [
             "Bond Street", "Green Park", "Westminster", "Waterloo",
@@ -16,15 +19,17 @@ def build_london_metro_graph():
         ],
         "Piccadilly": [
             "South Kensington", "Gloucester Road", "Earl's Court",
-            "Barons Court", "Hammersmith", "Turnham Green", "Acton Town"
+            "Barons Court", "Hammersmith", "Turnham Green",
+            "Acton Town"
         ],
         "District": [
             "Notting Hill Gate", "High Street Kensington", "Earl's Court",
             "West Kensington", "Barons Court", "Hammersmith"
         ],
         "Circle": [
-            "Paddington", "Edgware Road", "Baker Street", "Great Portland Street",
-            "Euston Square", "Farringdon", "Barbican"
+            "Paddington", "Edgware Road", "Baker Street",
+            "Great Portland Street", "Euston Square",
+            "Farringdon", "Barbican"
         ],
     }
 
@@ -62,7 +67,9 @@ def build_london_metro_graph():
             graph.nodes[node]["interchange"] = False
             node_lines = set()
             for neighbor in graph.neighbors(node):
-                edge_lines = graph.get_edge_data(node, neighbor).get("lines", set())
+                edge_lines = graph.get_edge_data(node, neighbor).get(
+                    "lines", set()
+                )
                 node_lines |= edge_lines
             graph.nodes[node]["lines"] = sorted(node_lines)
 
@@ -70,14 +77,14 @@ def build_london_metro_graph():
 
 
 def add_edge_weights(graph):
-    """Додає ваги до ребер графа (наприклад, вага = 1)."""
+    """Додає ваги ребрам графа."""
     for u, v in graph.edges():
         graph[u][v]["weight"] = 1
     return graph
 
 
 def visualize_graph(graph):
-    """Візуалізує граф метро Лондона."""
+    """Візуалізує граф метро."""
     pos = nx.spring_layout(graph, seed=42)
     plt.figure(figsize=(12, 8))
 
@@ -99,8 +106,10 @@ def visualize_graph(graph):
         )
 
     # Вузли: пересадки та звичайні
-    interchange_nodes = [n for n, d in graph.nodes(data=True) if d["interchange"]]
-    regular_nodes = [n for n, d in graph.nodes(data=True) if not d["interchange"]]
+    interchange_nodes = [n for n, d in graph.nodes(data=True)
+                         if d["interchange"]]
+    regular_nodes = [n for n, d in graph.nodes(data=True)
+                     if not d["interchange"]]
 
     nx.draw_networkx_nodes(
         graph, pos, nodelist=regular_nodes, node_size=500,
@@ -174,10 +183,55 @@ def bfs_path(graph, start, goal):
     return None
 
 
+def dijkstra(graph, start):
+    """Реалізація алгоритму Дейкстри для однієї стартової вершини."""
+    distances = {node: float("inf") for node in graph.nodes}
+    previous = {node: None for node in graph.nodes}
+    distances[start] = 0
+
+    pq = [(0, start)]  # (відстань, вершина)
+
+    while pq:
+        current_dist, current_node = heapq.heappop(pq)
+
+        if current_dist > distances[current_node]:
+            continue
+
+        for neighbor in graph.neighbors(current_node):
+            weight = graph[current_node][neighbor].get("weight", 1)
+            distance = current_dist + weight
+
+            if distance < distances[neighbor]:
+                distances[neighbor] = distance
+                previous[neighbor] = current_node
+                heapq.heappush(pq, (distance, neighbor))
+
+    # Відновлення шляхів
+    paths = {}
+    for node in graph.nodes:
+        if distances[node] < float("inf"):
+            path = []
+            current = node
+            while current is not None:
+                path.append(current)
+                current = previous[current]
+            paths[node] = list(reversed(path))
+        else:
+            paths[node] = None
+
+    return paths, distances
+
+
 def dijkstra_all_pairs(graph):
-    """Знаходить найкоротші шляхи між усіма вершинами за алгоритмом Дейкстри."""
-    shortest_paths = dict(nx.all_pairs_dijkstra_path(graph, weight="weight"))
-    shortest_lengths = dict(nx.all_pairs_dijkstra_path_length(graph, weight="weight"))
+    """Знаходить найкоротші шляхи між усіма вершинами власною реалізацією."""
+    shortest_paths = {}
+    shortest_lengths = {}
+
+    for source in graph.nodes:
+        paths, distances = dijkstra(graph, source)
+        shortest_paths[source] = paths
+        shortest_lengths[source] = distances
+
     return shortest_paths, shortest_lengths
 
 
