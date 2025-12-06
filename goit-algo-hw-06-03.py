@@ -1,12 +1,11 @@
 import heapq
 from collections import deque
-
 import matplotlib.pyplot as plt
 import networkx as nx
 
 
 def build_london_metro_graph():
-    """Створює фрагмент мережі метро Лондона як граф NetworkX."""
+    """Створює фрагмент мережі метро Лондона"""
     lines = {
         "Central": [
             "Notting Hill Gate", "Queensway", "Lancaster Gate",
@@ -190,7 +189,8 @@ def dijkstra(graph, start):
     distances[start] = 0
 
     pq = [(0, start)]  # (відстань, вершина)
-
+    
+    # Цикл реалізації алгоритму Дейкстри 
     while pq:
         current_dist, current_node = heapq.heappop(pq)
 
@@ -223,7 +223,7 @@ def dijkstra(graph, start):
 
 
 def dijkstra_all_pairs(graph):
-    """Знаходить найкоротші шляхи між усіма вершинами власною реалізацією."""
+    """Знаходить найкоротші шляхи між усіма вершинами"""
     shortest_paths = {}
     shortest_lengths = {}
 
